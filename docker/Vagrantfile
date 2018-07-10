@@ -1,0 +1,23 @@
+Vagrant.configure(2) do |config|
+  config.vm.box = "centos/7"
+  config.vm.network "public_network"
+  config.vm.synced_folder ".", "/vagrant", disabled: false
+  config.vm.hostname = "docker.example.com"
+  
+  config.vm.provision "shell", inline: <<-SHELL
+     echo 'nameserver 8.8.8.8' > /etc/resolv.conf
+     rpm -ivh https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
+     yum -y install puppet-agent
+     echo "include docker" > /etc/puppetlabs/code/environments/production/manifests/site.pp
+	 echo "include apache" >> /etc/puppetlabs/code/environments/production/manifests/site.pp
+	 echo "export PATH=/opt/puppetlabs/bin:$PATH" >/root/.bashrc
+	 yum -y install git
+	 cp -r /vagrant/puppet/* /etc/puppetlabs/code/environments/production/modules
+	 source /root/.bashrc
+  SHELL
+
+  config.vm.provision "puppet" do |puppet|
+    puppet.manifests_path = ["vm", "/etc/puppetlabs/code/environments/production/manifests"]
+    puppet.manifest_file = "site.pp"
+  end
+end
